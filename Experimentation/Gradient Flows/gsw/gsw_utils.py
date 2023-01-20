@@ -75,14 +75,19 @@ def get_minSW_smooth(X,Y,lr=1e-2,num_iter=100,s=1,std=0,init=None):
     return theta.data, loss_l#,proj_l
 
 
-def load_data(name='swiss_roll', n_samples=1000):
+def load_data(name='swiss_roll', n_samples=1000,dim=2):
     N=n_samples
-    if name == 'gaussian_2d':
+    if name == 'gaussian' :
+        mu_s = np.random.randint(-10,-1,dim)
+        cov_s = np.diag(np.random.randint(1,10,dim))
+        cov_s = cov_s * np.eye(dim)
+        temp = np.random.multivariate_normal(mu_s, cov_s, n_samples)
+    elif name == 'gaussian_2d':
         mu_s = np.ones(2)
         mu_s = np.array([i*float(np.random.rand(1,1))+4 for i in mu_s]) 
         cov_s = np.ones((2, 2))
         cov_s = cov_s * np.eye(2)
-        cov_s = np.array([[0.5,-2], [-2, 5]])
+        #cov_s = np.array([[0.5,-2], [-2, 5]])
         temp=np.random.multivariate_normal(mu_s, cov_s, N)
     elif name == 'gaussian_3d':
         mu_s = np.ones(3)
