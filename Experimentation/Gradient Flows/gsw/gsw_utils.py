@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 import ot
-from sklearn.datasets import make_swiss_roll, make_moons, make_circles, make_blobs
+from sklearn.datasets import make_swiss_roll, make_moons, make_circles, make_blobs, make_spd_matrix
 from scipy.stats import random_correlation
 from tqdm import trange
 
@@ -84,7 +84,21 @@ def load_data(name='swiss_roll', n_samples=1000):
         cov_s = cov_s * np.eye(2)
         cov_s = np.array([[0.5,-2], [-2, 5]])
         temp=np.random.multivariate_normal(mu_s, cov_s, N)
-        #temp/=abs(temp).max()
+    elif name == 'gaussian_3d':
+        mu_s = np.ones(3)
+        mu_s = np.array([i*float(np.random.rand(1,1))+4 for i in mu_s]) 
+        cov_s = make_spd_matrix(3, random_state=1)
+        temp=np.random.multivariate_normal(mu_s, cov_s, N)
+    elif name == 'gaussian_20d':
+        mu_s = np.ones(20)
+        mu_s = np.array([i*float(np.random.rand(1,1))+4 for i in mu_s]) 
+        cov_s = make_spd_matrix(20, random_state=1)
+        temp=np.random.multivariate_normal(mu_s, cov_s, N)
+    elif name == 'gaussian_200d':
+        mu_s = np.ones(200)
+        mu_s = np.array([i*float(np.random.rand(1,1))+4 for i in mu_s]) 
+        cov_s = make_spd_matrix(200, random_state=1)
+        temp=np.random.multivariate_normal(mu_s, cov_s, N)
     elif name == 'gaussian_2d_small_v':
         mu_s = np.ones(2)
         mu_s = np.array([i*float(np.random.rand(1,1)) for i in mu_s]) 

@@ -149,6 +149,8 @@ class GSW():
         optimizer = torch.optim.SGD([theta], lr=lr)
         loss_l=torch.empty(num_iter)
         #proj_l=torch.empty((num_iter,X.shape[1]))
+        
+        prev_loss = 0
         for i in range(num_iter):
             theta.data/=torch.norm(theta.data)
             optimizer.zero_grad()
@@ -158,6 +160,13 @@ class GSW():
             optimizer.step()
         
             loss_l[i]=loss.data
+            
+            thres = 1e-4
+            if i%5 == 0:
+            	if (np.abs(loss_l[i].float()-prev_loss) < thres):
+            		i = num_iter
+            	else:
+            		prev_loss = loss_l[i]
             #proj_l[i,:]=theta.data
         res=self.upperW2_smooth(X,Y,theta.data.float(),s=1,std=0)
         return res,theta.data, loss_l#,proj_l
