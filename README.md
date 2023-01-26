@@ -1,2 +1,2 @@
-# MinSW
-Public repository of minSW implementation
+# SWGG
+Public repository of SWGG implementation
