@@ -10,37 +10,39 @@ import numpy as np
 def compute_bary_line(X_line_sort,Y_line_sort,theta) :
     Z_line_sort=(X_line_sort+Y_line_sort)/2
     Z = Z_line_sort[:,None]*theta[None,:]
-    return Z_line_sort,Z
+    return Z
 
-def W2_line_W(X,X_line,X_line_sort,Y_line_sort,theta): 
+def W2_proj(X,X_line,theta): 
     n=X.shape[0]
     X_proj = X_line[:,None,:]*theta[None,:,:]
-    if len(X.shape)==2:
-        W_s = torch.norm(X[:,:,None]-X_proj,dim=(0,1))**2
-    else :
-        W_s = torch.norm(X-X_proj,dim=(0,1))**2 
-    W_1d = torch.sum((X_line_sort-Y_line_sort)**2,axis=0)
-    return W_s/n+W_1d/n
+    return torch.norm(X[:,:,None]-X_proj,dim=(0,1))**2
+    
+def W2_1d(X_line_sort,Y_line_sort):
+    return torch.sum((X_line_sort-Y_line_sort)**2,axis=0)
 
-def compute_bary_gene(X_sort,Y_sort):
-    bary=(X_sort+Y_sort)/2
-    return bary
     
 def SWGG_GG(X,Y,theta):
     n=X.shape[0]
+    
     X_line=torch.matmul(X,theta)
     Y_line=torch.matmul(Y,theta)
+    
     X_line_sort,u=torch.sort(X_line,axis=0)
     Y_line_sort,v=torch.sort(Y_line,axis=0)
+    
     X_sort=X[u].transpose(1,2)
     Y_sort=Y[v].transpose(1,2)
-    Z_line_sort,Z=compute_bary_line(X_line_sort,Y_line_sort,theta)
-    bary=compute_bary_gene(X_sort,Y_sort)
-    bary_line=torch.einsum('ijk,jk->ik',bary,theta) 
-    W_baryZ=W2_line_W(bary,bary_line,bary_line,Z_line_sort,theta)
-    W_XZ=W2_line_W(X,X_line,X_line_sort,Z_line_sort,theta)
-    W_YZ=W2_line_W(Y,Y_line,Y_line_sort,Z_line_sort,theta)
-    return -4*W_baryZ+2*W_XZ+2*W_YZ,u,v
+    
+    Z=compute_bary_line(X_line_sort,Y_line_sort,theta)
+    bary=(X_sort+Y_sort)/2
+
+    W_projX = W2_proj(X,X_line,theta)
+    W_projY = W2_proj(Y,Y_line,theta)
+    W_1d = W2_1d(X_line_sort,Y_line_sort)
+    
+    W_projbary = torch.norm(Z-bary,dim=(0,1))**2
+    
+    return (-4*W_projbary+2*W_projX+2*W_projY+W_1d)/n,u,v
 
 
 
@@ -59,6 +61,20 @@ def SWGG_CP(X, Y, theta):
     Y_line_sort, v = torch.sort(Y_line, axis=0)
 
     return torch.mean(torch.sum(torch.square(X[u]-Y[v]), axis=-1), axis=0),u,v
+    
+def SWGG_CP_color(X, Y, theta):
+    n = X.shape[0]
+
+    X_line = torch.matmul(X, theta)
+    Y_line = torch.matmul(Y, theta)
+
+    X_line_sort, u = torch.sort(X_line, axis=0)
+    Y_line_sort, v = torch.sort(Y_line, axis=0)
+    
+    W=torch.mean(torch.sum(torch.square(X[u]-Y[v]), axis=-1), axis=0)
+
+    idx=torch.argmin(W)
+    return W[idx],u[:,idx],v[:,idx]
 
 
 
@@ -67,15 +83,16 @@ def SWGG_CP(X, Y, theta):
 #SWGG with optimization scheme
 #return the optimal theta, the loss and all the theta
 
-def get_SWGG_smooth(X,Y,lr=1e-2,num_iter=100,s=1,std=0,device='cpu'):
-    theta=torch.randn((X.shape[1],), device=X.device, dtype=X.dtype,requires_grad=True)
+def get_SWGG_smooth(X,Y,lr=1e-2,num_iter=100,s=1,std=0,device='cpu',verbose=True):
+    theta=torch.randn((X.shape[1],), device=device, dtype=X.dtype,requires_grad=True)
     
     #optimizer = torch.optim.Adam([theta], lr=lr) #Reduce the lr if you use Adam
     optimizer = torch.optim.SGD([theta], lr=lr)
     
     loss_l=torch.empty(num_iter)
     proj_l=torch.empty((num_iter,X.shape[1]))
-    pbar = trange(num_iter)
+    if verbose: pbar = trange(num_iter)
+    else: pbar = range(num_iter)
     for i in pbar:
         theta.data/=torch.norm(theta.data)
         
@@ -86,7 +103,8 @@ def get_SWGG_smooth(X,Y,lr=1e-2,num_iter=100,s=1,std=0,device='cpu'):
         
         loss_l[i]=loss.data
         proj_l[i,:]=theta.data
-        pbar.set_postfix_str(f"loss = {loss.item():.3f}")
+        if verbose:
+            pbar.set_postfix_str(f"loss = {loss.item():.3f}")
     return theta, loss_l, proj_l
 
 

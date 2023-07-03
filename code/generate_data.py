@@ -44,8 +44,8 @@ def make_data(expe,n_samples,dim=2,device='cpu'):
         xt = make_blobs_reg(n_samples=n_samples, n_blobs=3).dot(get_rot(r))
     elif expe=='mog_reg2':
         r=.5
-        xs = make_blobs_reg(n_samples=n_samples, n_blobs=5)
-        xt = make_blobs_reg(n_samples=n_samples, n_blobs=5).dot(get_rot(r))
+        xs = make_blobs_reg(n_samples=n_samples, n_blobs=4)
+        xt = make_blobs_reg(n_samples=n_samples, n_blobs=4).dot(get_rot(r))
     elif expe=='mog_random':
         xs = make_blobs_random(n_samples=n_samples, scale=.3,n_blobs=10)
         xt = make_blobs_random(n_samples=n_samples, scale=.3,n_blobs=10)
