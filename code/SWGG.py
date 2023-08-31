@@ -62,21 +62,6 @@ def SWGG_CP(X, Y, theta):
 
     return torch.mean(torch.sum(torch.square(X[u]-Y[v]), axis=-1), axis=0),u,v
     
-def SWGG_CP_color(X, Y, theta):
-    n = X.shape[0]
-
-    X_line = torch.matmul(X, theta)
-    Y_line = torch.matmul(Y, theta)
-
-    X_line_sort, u = torch.sort(X_line, axis=0)
-    Y_line_sort, v = torch.sort(Y_line, axis=0)
-    
-    W=torch.mean(torch.sum(torch.square(X[u]-Y[v]), axis=-1), axis=0)
-
-    idx=torch.argmin(W)
-    return W[idx],u[:,idx],v[:,idx]
-
-
 
 
 #======== 3rd version ==========
@@ -146,3 +131,55 @@ def SWGG_smooth(X,Y,theta,s=1,std=0,device='cpu'):
     
     W_baryZ=torch.sum((bary_blur-Z)**2)/n
     return -4*W_baryZ+2*W_XZ+2*W_YZ
+    
+    
+    
+#======== 1st Version quantile version
+def quantile_SWGG_CP(X,Y,a,b,theta):
+    ns,d=X.shape
+    nt=Y.shape[0]
+    n_proj=theta.shape[1]
+    
+    X_line=torch.matmul(X,theta)
+    Y_line=torch.matmul(Y,theta)
+    
+    X_line_sort,u=torch.sort(X_line,axis=0)
+    Y_line_sort,v=torch.sort(Y_line,axis=0)
+
+    r_X=torch.cumsum(a[u],axis=0)
+    r_X=torch.cat((torch.zeros((1,n_proj)),r_X))
+    r_Y=torch.cumsum(b[v],axis=0)
+    r_Y=torch.cat((torch.zeros((1,n_proj)),r_Y))
+    r,_=torch.sort(torch.cat((r_X,r_Y)),axis=0)
+    r=r[1:-1]#Is the x-axis of the quantile function
+    
+    w_a=torch.searchsorted(r_X.T.contiguous(),r.T.contiguous(),side='right').T[:-1]-1 #Transport plan of X after ordering u
+    w_b=torch.searchsorted(r_Y.T.contiguous(),r.T.contiguous(),side='right').T[:-1]-1
+
+    u_w=torch.take_along_dim(u,w_a,dim=0)#permutation of X
+    v_w=torch.take_along_dim(v,w_b,dim=0)
+    
+    q_X=X[u_w]#Is the y-axis of the quantile function
+    q_Y=Y[v_w]
+    
+    delta_r = r[1:] - r[:-1]
+    return torch.sum(delta_r*torch.sum((q_X-q_Y)**2,axis=-1),axis=0),delta_r,w_a,w_b,u,v
+  
+  
+  
+  
+#========Utils for Color transfer    
+def SWGG_CP_color(X, Y, theta):
+    n = X.shape[0]
+
+    X_line = torch.matmul(X, theta)
+    Y_line = torch.matmul(Y, theta)
+
+    X_line_sort, u = torch.sort(X_line, axis=0)
+    Y_line_sort, v = torch.sort(Y_line, axis=0)
+    
+    W=torch.mean(torch.sum(torch.square(X[u]-Y[v]), axis=-1), axis=0)
+
+    idx=torch.argmin(W)
+    return W[idx],u[:,idx],v[:,idx]
+
